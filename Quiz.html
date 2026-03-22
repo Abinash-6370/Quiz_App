@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QuizFlow — Test Your Knowledge</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0a0a0f;
+  --surface:#13131a;
+  --surface2:#1c1c28;
+  --surface3:#242436;
+  --accent:#7c6dfa;
+  --accent2:#fa6d8d;
+  --accent3:#6dfabc;
+  --text:#f0eff8;
+  --text2:#9896b0;
+  --text3:#5a5870;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.13);
+  --radius:16px;
+  --radius-lg:24px;
+}
+
+html{scroll-behavior:smooth}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* Animated background orbs */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.16;animation:orbFloat 14s ease-in-out infinite}
+.orb1{width:600px;height:600px;background:var(--accent);top:-150px;left:-150px;animation-delay:0s}
+.orb2{width:450px;height:450px;background:var(--accent2);bottom:-100px;right:-100px;animation-delay:-5s}
+.orb3{width:350px;height:350px;background:var(--accent3);top:45%;left:55%;animation-delay:-9s}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(40px,-50px) scale(1.06)}
+  66%{transform:translate(-25px,25px) scale(0.96)}
+}
+
+/* Grid overlay */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);
+  background-size:52px 52px;
+}
+
+/* Layout */
+.page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1rem}
+
+/* Screen transitions */
+.screen{display:none;width:100%;max-width:600px;animation:screenIn 0.55s cubic-bezier(0.22,1,0.36,1) both}
+.screen.active{display:block}
+@keyframes screenIn{from{opacity:0;transform:translateY(32px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ── WELCOME ── */
+.welcome-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(124,109,250,0.1);border:1px solid rgba(124,109,250,0.28);
+  border-radius:100px;padding:6px 18px;font-size:11px;color:var(--accent);
+  margin-bottom:2rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;
+  animation:badgePulse 3s ease-in-out infinite;
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:dotBlink 1.5s ease-in-out infinite;flex-shrink:0}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(124,109,250,0.3)}50%{box-shadow:0 0 0 10px rgba(124,109,250,0)}}
+@keyframes dotBlink{0%,100%{opacity:1}50%{opacity:0.25}}
+
+.welcome-title{
+  font-family:'Syne',sans-serif;font-size:clamp(3rem,9vw,5.5rem);font-weight:800;
+  line-height:0.95;margin-bottom:1.25rem;letter-spacing:-0.04em;
+}
+.welcome-title .grad{
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 60%,#fa9e6d 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.welcome-sub{font-size:1.05rem;color:var(--text2);font-weight:300;line-height:1.75;max-width:420px;margin:0 auto 2.5rem}
+
+.welcome-stats{display:flex;gap:12px;justify-content:center;margin-bottom:2.5rem;flex-wrap:wrap}
+.w-stat{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1rem 1.25rem;text-align:center;flex:1;min-width:90px;
+  transition:border-color 0.3s,transform 0.3s;
+}
+.w-stat:hover{border-color:rgba(124,109,250,0.35);transform:translateY(-4px)}
+.w-stat-num{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;color:var(--text);margin-bottom:2px}
+.w-stat-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em}
+
+.category-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:3rem}
+.cat-pill{
+  padding:8px 16px;border-radius:100px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);font-size:13px;cursor:pointer;transition:all 0.22s;
+}
+.cat-pill:hover,.cat-pill.active{background:rgba(124,109,250,0.13);border-color:rgba(124,109,250,0.45);color:var(--accent)}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  padding:14px 32px;border-radius:100px;border:none;font-family:'DM Sans',sans-serif;
+  font-size:15px;font-weight:500;cursor:pointer;transition:all 0.25s;
+  position:relative;overflow:hidden;letter-spacing:0.01em;
+}
+.btn:active{transform:scale(0.97) !important}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),#a56dfa);color:#fff;
+  box-shadow:0 4px 28px rgba(124,109,250,0.4);
+}
+.btn-primary:hover{box-shadow:0 8px 40px rgba(124,109,250,0.6);transform:translateY(-3px)}
+.btn-ghost{background:var(--surface2);border:1px solid var(--border2);color:var(--text)}
+.btn-ghost:hover{background:var(--surface3);transform:translateY(-2px)}
+.btn-lg{padding:18px 52px;font-size:17px}
+
+/* ── QUIZ ── */
+.quiz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.75rem}
+.q-label{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:12px}
+.score-display{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:6px 14px;
+}
+.score-num{font-family:'Syne',sans-serif;font-weight:800;color:var(--accent);font-size:16px}
+.score-lbl{font-size:11px;color:var(--text3)}
+
+/* Timer */
+.timer-wrap{position:relative;width:54px;height:54px}
+.timer-svg{transform:rotate(-90deg)}
+.timer-track{fill:none;stroke:var(--surface3);stroke-width:3.5}
+.timer-arc{fill:none;stroke-width:3.5;stroke-linecap:round;transition:stroke-dashoffset 0.95s linear,stroke 0.4s}
+.timer-num2{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:800;
+}
+
+/* Progress */
+.progress-wrap{margin-bottom:1.75rem}
+.progress-track{height:5px;background:var(--surface3);border-radius:5px;overflow:hidden;position:relative}
+.progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:5px;transition:width 0.45s cubic-bezier(0.22,1,0.36,1);position:relative;
+}
+.progress-fill::after{
+  content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;border-radius:50%;background:var(--accent2);
+  box-shadow:0 0 10px var(--accent2),0 0 20px rgba(250,109,141,0.4);
+}
+.progress-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--text3)}
+
+/* Flashcard */
+.card-wrap{perspective:1400px;height:210px;margin-bottom:1.5rem;cursor:pointer}
+.card-inner{
+  width:100%;height:100%;position:relative;transform-style:preserve-3d;
+  transition:transform 0.65s cubic-bezier(0.22,1,0.36,1);
+}
+.card-inner.flipped{transform:rotateY(180deg)}
+.card-face{
+  position:absolute;inset:0;backface-visibility:hidden;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:1.5rem 2rem;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;overflow:hidden;
+}
+.card-glow{
+  position:absolute;top:-40px;left:50%;transform:translateX(-50%);
+  width:200px;height:100px;border-radius:50%;
+  background:rgba(124,109,250,0.12);filter:blur(30px);
+  transition:opacity 0.4s;opacity:0;
+}
+.card-wrap:hover .card-glow{opacity:1}
+.card-back{transform:rotateY(180deg);background:var(--surface2)}
+.card-back .card-glow{background:rgba(109,250,188,0.1)}
+.card-corner{
+  position:absolute;top:14px;right:16px;
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(124,109,250,0.1);border:1px solid rgba(124,109,250,0.2);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+}
+.card-back .card-corner{background:rgba(109,250,188,0.1);border-color:rgba(109,250,188,0.2)}
+.card-eyebrow{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.9rem;font-weight:600}
+.card-q{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:700;line-height:1.4;color:var(--text)}
+.card-a{font-family:'Syne',sans-serif;font-size:1.65rem;font-weight:800;color:var(--accent3)}
+.card-tap{font-size:11px;color:var(--text3);margin-top:1rem;display:flex;align-items:center;gap:5px}
+.flip-icon{display:inline-block;animation:spinHint 3s ease-in-out infinite}
+@keyframes spinHint{0%,80%,100%{transform:rotate(0)}40%{transform:rotate(180deg)}}
+
+/* Options */
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
+.opt-btn{
+  padding:13px 14px;border-radius:var(--radius);border:1px solid var(--border2);
+  background:var(--surface);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;
+  cursor:pointer;text-align:left;transition:all 0.2s cubic-bezier(0.22,1,0.36,1);
+  display:flex;align-items:center;gap:10px;position:relative;overflow:hidden;
+}
+.opt-letter{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:800;color:var(--text3);
+  flex-shrink:0;transition:all 0.2s;
+}
+.opt-btn:hover:not(:disabled){
+  border-color:rgba(124,109,250,0.5);background:rgba(124,109,250,0.08);
+  transform:translateY(-3px);box-shadow:0 6px 20px rgba(124,109,250,0.15);
+}
+.opt-btn:hover:not(:disabled) .opt-letter{border-color:var(--accent);color:var(--accent);background:rgba(124,109,250,0.15)}
+.opt-btn.correct{border-color:rgba(109,250,188,0.5);background:rgba(109,250,188,0.09);color:var(--accent3);animation:correctPop 0.45s cubic-bezier(0.22,1,0.36,1)}
+.opt-btn.correct .opt-letter{border-color:var(--accent3);color:var(--accent3);background:rgba(109,250,188,0.15)}
+.opt-btn.wrong{border-color:rgba(250,109,141,0.5);background:rgba(250,109,141,0.09);color:var(--accent2);animation:wrongShake 0.45s ease}
+.opt-btn.wrong .opt-letter{border-color:var(--accent2);color:var(--accent2);background:rgba(250,109,141,0.15)}
+.opt-btn:disabled{cursor:default}
+@keyframes correctPop{0%{transform:scale(0.96)}55%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+.action-row{display:flex;gap:10px}
+
+/* ── RESULTS ── */
+.result-wrap{text-align:center;padding:0.5rem 0}
+.result-ring-wrap{position:relative;width:150px;height:150px;margin:0 auto 1.75rem}
+.result-ring-wrap svg{transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--surface3);stroke-width:9}
+.ring-fill{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset 1.4s cubic-bezier(0.22,1,0.36,1) 0.4s}
+.result-pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.result-pct-num{font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;color:var(--text)}
+.result-pct-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em}
+.result-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:0.5rem;letter-spacing:-0.02em}
+.result-msg{color:var(--text2);font-size:1rem;margin-bottom:2rem;font-weight:300}
+.result-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:2rem}
+.r-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;text-align:center;transition:transform 0.3s,border-color 0.3s}
+.r-card:hover{transform:translateY(-4px);border-color:var(--border2)}
+.r-card-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:4px}
+.r-card-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em}
+.r-card.good .r-card-num{color:var(--accent3)}
+.r-card.bad .r-card-num{color:var(--accent2)}
+.r-card.neutral .r-card-num{color:var(--accent)}
+.result-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* Toast */
+.feedback-toast{
+  position:fixed;top:1.5rem;left:50%;transform:translateX(-50%) translateY(-14px);
+  background:var(--surface2);border:1px solid var(--border2);border-radius:100px;
+  padding:10px 26px;font-size:14px;font-weight:500;letter-spacing:0.02em;
+  opacity:0;transition:all 0.35s cubic-bezier(0.22,1,0.36,1);pointer-events:none;z-index:200;
+  white-space:nowrap;
+}
+.feedback-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.feedback-toast.ct{border-color:rgba(109,250,188,0.4);color:var(--accent3)}
+.feedback-toast.wt{border-color:rgba(250,109,141,0.4);color:var(--accent2)}
+
+/* Confetti */
+.confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:100}
+.cp{position:absolute;top:-10px;animation:cfFall linear forwards}
+@keyframes cfFall{to{transform:translateY(105vh) rotate(900deg);opacity:0}}
+
+@keyframes autoShrink{from{width:100%}to{width:0%}}
+
+@media(max-width:480px){
+  .options-grid{grid-template-columns:1fr}
+  .welcome-stats{gap:8px}
+  .welcome-title{font-size:3rem}
+  .btn-lg{padding:16px 36px;font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+<div class="bg-grid"></div>
+<div class="feedback-toast" id="toast"></div>
+<div class="confetti-wrap" id="confetti"></div>
+
+<div class="page">
+
+  <!-- WELCOME -->
+  <div class="screen active" id="screen-welcome" style="text-align:center">
+    <div class="welcome-badge"><span class="badge-dot"></span>Quiz Time</div>
+    <h1 class="welcome-title">Test Your<br/><span class="grad">Knowledge</span></h1>
+    <p class="welcome-sub">8 questions. 15 seconds each. Flip the card, pick your answer, beat the clock.</p>
+    <div class="welcome-stats">
+      <div class="w-stat"><div class="w-stat-num">8</div><div class="w-stat-lbl">Questions</div></div>
+      <div class="w-stat"><div class="w-stat-num">15s</div><div class="w-stat-lbl">Per Card</div></div>
+      <div class="w-stat"><div class="w-stat-num">4</div><div class="w-stat-lbl">Options</div></div>
+    </div>
+    <div class="category-row">
+      <span class="cat-pill active">🌍 General</span>
+      <span class="cat-pill">🔬 Science</span>
+      <span class="cat-pill">📜 History</span>
+      <span class="cat-pill">🎨 Art</span>
+    </div>
+    <button class="btn btn-primary btn-lg" onclick="startQuiz()">▶ &nbsp;Start Quiz</button>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-header">
+      <div class="q-label" id="q-label">Question 1 of 8</div>
+      <div class="header-right">
+        <div class="score-display">
+          <span class="score-lbl">Score</span>
+          <span class="score-num" id="score-num">0</span>
+        </div>
+        <div class="timer-wrap">
+          <svg class="timer-svg" width="54" height="54" viewBox="0 0 54 54">
+            <circle class="timer-track" cx="27" cy="27" r="22"/>
+            <circle class="timer-arc" id="timer-arc" cx="27" cy="27" r="22"/>
+          </svg>
+          <div class="timer-num2" id="timer-num2">15</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-meta">
+        <span id="p-left">0% complete</span>
+        <span id="p-right">8 remaining</span>
+      </div>
+    </div>
+
+    <div class="card-wrap" onclick="flipCard()">
+      <div class="card-inner" id="card-inner">
+        <div class="card-face">
+          <div class="card-glow"></div>
+          <div class="card-corner">?</div>
+          <div class="card-eyebrow" id="card-eyebrow">Category</div>
+          <div class="card-q" id="card-q">Loading...</div>
+          <div class="card-tap"><span class="flip-icon">↻</span> Tap to reveal answer</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-glow"></div>
+          <div class="card-corner">✓</div>
+          <div class="card-eyebrow">Answer</div>
+          <div class="card-a" id="card-a">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="options-grid" id="options-grid"></div>
+
+    <div class="action-row">
+      <button class="btn btn-ghost" style="flex:0 0 auto;padding:14px 22px;font-size:18px" onclick="skipCard()" title="Skip">⏭</button>
+      <button class="btn btn-primary" style="flex:1" onclick="nextCard()">Next →</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="screen" id="screen-result">
+    <div class="result-wrap">
+      <div class="result-ring-wrap">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle class="ring-track" cx="75" cy="75" r="62"/>
+          <circle class="ring-fill" id="ring-fill" cx="75" cy="75" r="62"/>
+        </svg>
+        <div class="result-pct">
+          <div class="result-pct-num" id="result-pct-num">0%</div>
+          <div class="result-pct-lbl">Score</div>
+        </div>
+      </div>
+      <h2 class="result-title" id="result-title">Well done!</h2>
+      <p class="result-msg" id="result-msg">Quiz complete.</p>
+      <div class="result-cards">
+        <div class="r-card good"><div class="r-card-num" id="r-correct">0</div><div class="r-card-lbl">Correct</div></div>
+        <div class="r-card bad"><div class="r-card-num" id="r-wrong">0</div><div class="r-card-lbl">Wrong</div></div>
+        <div class="r-card neutral"><div class="r-card-num" id="r-skipped">0</div><div class="r-card-lbl">Skipped</div></div>
+      </div>
+      <div class="result-btns">
+        <button class="btn btn-primary btn-lg" onclick="restartQuiz()">↻ Play Again</button>
+        <button class="btn btn-ghost" onclick="goHome()">⌂ Home</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BANK=[
+  {q:"What is the powerhouse of the cell?",a:"Mitochondria",opts:["Nucleus","Ribosome","Mitochondria","Lysosome"],cat:"🔬 Science"},
+  {q:"What year did World War II end?",a:"1945",opts:["1939","1942","1945","1918"],cat:"📜 History"},
+  {q:"What is the chemical symbol for gold?",a:"Au",opts:["Go","Au","Ag","Gd"],cat:"🔬 Science"},
+  {q:"Who wrote Romeo and Juliet?",a:"Shakespeare",opts:["Dickens","Hemingway","Shakespeare","Tolstoy"],cat:"🎨 Art"},
+  {q:"What is the largest planet in our solar system?",a:"Jupiter",opts:["Saturn","Neptune","Jupiter","Uranus"],cat:"🌍 General"},
+  {q:"What is H2O commonly known as?",a:"Water",opts:["Salt","Oxygen","Hydrogen","Water"],cat:"🔬 Science"},
+  {q:"What is the capital of Japan?",a:"Tokyo",opts:["Seoul","Beijing","Tokyo","Shanghai"],cat:"🌍 General"},
+  {q:"How many sides does a hexagon have?",a:"6",opts:["5","7","8","6"],cat:"🌍 General"},
+  {q:"What is the speed of light (approx)?",a:"300,000 km/s",opts:["150,000 km/s","300,000 km/s","500,000 km/s","1,000,000 km/s"],cat:"🔬 Science"},
+  {q:"Who painted the Mona Lisa?",a:"Leonardo da Vinci",opts:["Michelangelo","Raphael","Leonardo da Vinci","Botticelli"],cat:"🎨 Art"},
+  {q:"What is the capital of Australia?",a:"Canberra",opts:["Sydney","Melbourne","Canberra","Brisbane"],cat:"🌍 General"},
+  {q:"How many bones are in the adult human body?",a:"206",opts:["186","206","226","246"],cat:"🔬 Science"},
+  {q:"In what year did the Titanic sink?",a:"1912",opts:["1905","1912","1918","1923"],cat:"📜 History"},
+  {q:"What is the longest river in the world?",a:"Nile",opts:["Amazon","Yangtze","Nile","Mississippi"],cat:"🌍 General"},
+  {q:"Who invented the telephone?",a:"Alexander Graham Bell",opts:["Thomas Edison","Nikola Tesla","Alexander Graham Bell","Guglielmo Marconi"],cat:"📜 History"},
+  {q:"What gas do plants absorb from the atmosphere?",a:"Carbon dioxide",opts:["Oxygen","Nitrogen","Carbon dioxide","Hydrogen"],cat:"🔬 Science"},
+  {q:"Which country invented pizza?",a:"Italy",opts:["Greece","France","Italy","Spain"],cat:"🌍 General"},
+  {q:"How many continents are on Earth?",a:"7",opts:["5","6","7","8"],cat:"🌍 General"},
+  {q:"Who was the first person to walk on the Moon?",a:"Neil Armstrong",opts:["Buzz Aldrin","Yuri Gagarin","Neil Armstrong","John Glenn"],cat:"📜 History"},
+  {q:"What is the smallest country in the world?",a:"Vatican City",opts:["Monaco","Liechtenstein","Vatican City","San Marino"],cat:"🌍 General"},
+  {q:"Which element has the symbol O?",a:"Oxygen",opts:["Gold","Osmium","Oxygen","Oganesson"],cat:"🔬 Science"},
+  {q:"How many strings does a standard guitar have?",a:"6",opts:["4","5","6","7"],cat:"🎨 Art"},
+  {q:"What year did the Berlin Wall fall?",a:"1989",opts:["1985","1989","1991","1993"],cat:"📜 History"},
+  {q:"Which planet is known as the Red Planet?",a:"Mars",opts:["Venus","Mars","Jupiter","Saturn"],cat:"🌍 General"},
+  {q:"What is the capital of Brazil?",a:"Brasilia",opts:["Sao Paulo","Rio de Janeiro","Brasilia","Salvador"],cat:"🌍 General"},
+  {q:"Who wrote 1984?",a:"George Orwell",opts:["Aldous Huxley","George Orwell","Ray Bradbury","H.G. Wells"],cat:"🎨 Art"},
+  {q:"What is the hardest natural substance on Earth?",a:"Diamond",opts:["Quartz","Titanium","Diamond","Obsidian"],cat:"🔬 Science"},
+  {q:"How many players are on a standard soccer team?",a:"11",opts:["9","10","11","12"],cat:"🌍 General"},
+  {q:"What is the tallest mountain in the world?",a:"Mount Everest",opts:["K2","Kangchenjunga","Mount Everest","Lhotse"],cat:"🌍 General"},
+  {q:"Which artist famously cut off his own ear?",a:"Vincent van Gogh",opts:["Paul Gauguin","Claude Monet","Vincent van Gogh","Edgar Degas"],cat:"🎨 Art"},
+  {q:"What year did World War I begin?",a:"1914",opts:["1910","1914","1916","1918"],cat:"📜 History"},
+  {q:"What is the chemical symbol for iron?",a:"Fe",opts:["Ir","In","Fe","Fr"],cat:"🔬 Science"},
+  {q:"Which country has the most natural lakes?",a:"Canada",opts:["Russia","USA","Canada","Finland"],cat:"🌍 General"},
+  {q:"Who composed Fur Elise?",a:"Beethoven",opts:["Mozart","Bach","Beethoven","Chopin"],cat:"🎨 Art"},
+  {q:"What is the currency of Japan?",a:"Yen",opts:["Won","Yuan","Yen","Baht"],cat:"🌍 General"},
+  {q:"How many teeth does an adult human have?",a:"32",opts:["28","30","32","34"],cat:"🔬 Science"},
+  {q:"Who discovered penicillin?",a:"Alexander Fleming",opts:["Louis Pasteur","Alexander Fleming","Marie Curie","Joseph Lister"],cat:"📜 History"},
+  {q:"What is the capital of Canada?",a:"Ottawa",opts:["Toronto","Vancouver","Ottawa","Montreal"],cat:"🌍 General"},
+  {q:"Which Shakespeare play features the character Ophelia?",a:"Hamlet",opts:["Othello","Hamlet","King Lear","Macbeth"],cat:"🎨 Art"},
+  {q:"What is the largest ocean on Earth?",a:"Pacific",opts:["Atlantic","Indian","Pacific","Arctic"],cat:"🌍 General"},
+];
+const CARDS_PER_ROUND=8;
+function pickRound(){return shuffle(BANK).slice(0,CARDS_PER_ROUND);}
+const LETTERS=["A","B","C","D"];
+const TMAX=15;
+const CIRC=2*Math.PI*22;
+const RCIRC=2*Math.PI*62;
+
+let deck,idx,score,wrong,skipped,flipped,answered,timeLeft,timer;
+
+function shuffle(a){return[...a].sort(()=>Math.random()-0.5)}
+
+function startQuiz(){
+  deck=pickRound();idx=0;score=0;wrong=0;skipped=0;
+  switchScreen('screen-quiz');
+  renderCard();startTimer();
+}
+
+function switchScreen(to){
+  const cur=document.querySelector('.screen.active');
+  if(cur){
+    cur.style.transition='opacity 0.25s,transform 0.25s';
+    cur.style.opacity='0';cur.style.transform='translateY(-16px) scale(0.97)';
+    setTimeout(()=>{cur.classList.remove('active');cur.style.cssText='';},260);
+  }
+  setTimeout(()=>{
+    const next=document.getElementById(to);
+    next.classList.add('active');
+    next.style.animation='screenIn 0.55s cubic-bezier(0.22,1,0.36,1) both';
+  },200);
+}
+
+function renderCard(){
+  flipped=false;answered=false;
+  const card=deck[idx];
+  const opts=shuffle(card.opts);
+  document.getElementById('q-label').textContent=`Question ${idx+1} of ${deck.length}`;
+  document.getElementById('score-num').textContent=score;
+  document.getElementById('card-eyebrow').textContent=card.cat;
+  document.getElementById('card-q').textContent=card.q;
+  document.getElementById('card-a').textContent=card.a;
+  document.getElementById('card-inner').classList.remove('flipped');
+  const pct=Math.round((idx/deck.length)*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('p-left').textContent=pct+'% complete';
+  document.getElementById('p-right').textContent=(deck.length-idx)+' remaining';
+  const grid=document.getElementById('options-grid');
+  grid.innerHTML='';
+  opts.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt-btn';btn.dataset.val=o;
+    btn.innerHTML=`<span class="opt-letter">${LETTERS[i]}</span>${o}`;
+    btn.onclick=()=>choose(o);
+    grid.appendChild(btn);
+  });
+}
+
+function flipCard(){
+  flipped=!flipped;
+  document.getElementById('card-inner').classList.toggle('flipped',flipped);
+}
+
+function choose(val){
+  if(answered)return;
+  clearInterval(timer);answered=true;
+  const card=deck[idx];
+  const ok=(val===card.a);
+  if(ok)score++;else wrong++;
+  document.querySelectorAll('.opt-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.val===card.a)b.classList.add('correct');
+    else if(b.dataset.val===val&&!ok)b.classList.add('wrong');
+  });
+  document.getElementById('score-num').textContent=score;
+  showToast(ok?'✓ Correct!':'✗ Wrong!',ok?'ct':'wt');
+  scheduleAutoNext();
+}
+
+function skipCard(){
+  if(answered)return;
+  clearInterval(timer);answered=true;skipped++;
+  document.querySelectorAll('.opt-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.val===deck[idx].a)b.classList.add('correct');
+  });
+  showToast('⏭ Skipped','wt');
+  scheduleAutoNext();
+}
+
+let autoNextTimer=null;
+function scheduleAutoNext(){
+  clearTimeout(autoNextTimer);
+  // Show a countdown bar under the Next button
+  showAutoBar();
+  autoNextTimer=setTimeout(()=>nextCard(),1800);
+}
+
+function showAutoBar(){
+  let bar=document.getElementById('auto-bar');
+  if(!bar){
+    bar=document.createElement('div');bar.id='auto-bar';
+    bar.style.cssText='position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 100px 100px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:100%;transform-origin:left;animation:autoShrink 1.8s linear forwards';
+    const nextBtn=document.querySelector('.action-row');
+    nextBtn.style.position='relative';
+    nextBtn.appendChild(bar);
+  }else{
+    bar.style.animation='none';
+    void bar.offsetWidth;
+    bar.style.animation='autoShrink 1.8s linear forwards';
+  }
+}
+
+function nextCard(){
+  clearTimeout(autoNextTimer);
+  idx++;
+  if(idx>=deck.length){showResult();return;}
+  // Slide out current card, then render next
+  const cardWrap=document.querySelector('.card-wrap');
+  const optGrid=document.getElementById('options-grid');
+  cardWrap.style.transition='transform 0.35s cubic-bezier(0.4,0,1,1),opacity 0.35s';
+  cardWrap.style.transform='translateX(-40px) scale(0.95)';
+  cardWrap.style.opacity='0';
+  optGrid.style.transition='opacity 0.25s';
+  optGrid.style.opacity='0';
+  setTimeout(()=>{
+    cardWrap.style.transition='';cardWrap.style.transform='';cardWrap.style.opacity='';
+    optGrid.style.transition='';optGrid.style.opacity='';
+    renderCard();startTimer();
+    // Slide in new card from right
+    cardWrap.style.transform='translateX(40px) scale(0.95)';cardWrap.style.opacity='0';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      cardWrap.style.transition='transform 0.45s cubic-bezier(0.22,1,0.36,1),opacity 0.35s';
+      cardWrap.style.transform='';cardWrap.style.opacity='1';
+      setTimeout(()=>{cardWrap.style.transition='';},460);
+    }));
+  },320);
+}
+
+function startTimer(){
+  clearInterval(timer);timeLeft=TMAX;
+  updateTimer();
+  timer=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0){clearInterval(timer);autoFail();}},1000);
+}
+
+function updateTimer(){
+  const pct=timeLeft/TMAX;
+  const arc=document.getElementById('timer-arc');
+  arc.style.strokeDasharray=CIRC;
+  arc.style.strokeDashoffset=CIRC*(1-pct);
+  const col=timeLeft<=5?'#fa6d8d':timeLeft<=8?'#fabd6d':'#7c6dfa';
+  arc.style.stroke=col;
+  const n=document.getElementById('timer-num2');
+  n.textContent=timeLeft;n.style.color=col;
+}
+
+function autoFail(){
+  if(answered)return;
+  answered=true;wrong++;
+  showToast("⏰ Time's up!",'wt');
+  document.querySelectorAll('.opt-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.val===deck[idx].a)b.classList.add('correct');
+  });
+  scheduleAutoNext();
+}
+
+function showToast(msg,cls){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='feedback-toast '+cls+' show';
+  setTimeout(()=>t.className='feedback-toast',1800);
+}
+
+function showResult(){
+  clearInterval(timer);
+  const pct=Math.round((score/deck.length)*100);
+  switchScreen('screen-result');
+  setTimeout(()=>{
+    document.getElementById('r-correct').textContent=score;
+    document.getElementById('r-wrong').textContent=wrong;
+    document.getElementById('r-skipped').textContent=skipped;
+    const titles=['Keep Practicing!','Getting There!','Good Effort!','Well Done!','Excellent!','🔥 Perfect Score!'];
+    const msgs=['Every attempt makes you stronger.','You\'re on the right track!','Solid performance overall.','You really know your stuff!','Outstanding! Almost flawless.','Absolutely flawless. Incredible!'];
+    const tier=Math.min(5,Math.floor(pct/20));
+    document.getElementById('result-title').textContent=titles[tier];
+    document.getElementById('result-msg').textContent=msgs[tier];
+    const rf=document.getElementById('ring-fill');
+    rf.style.strokeDasharray=RCIRC;
+    rf.style.strokeDashoffset=RCIRC*(1-pct/100);
+    rf.style.stroke=pct>=80?'#6dfabc':pct>=50?'#7c6dfa':'#fa6d8d';
+    let n=0;
+    const c=setInterval(()=>{n=Math.min(n+Math.ceil(pct/25),pct);document.getElementById('result-pct-num').textContent=n+'%';if(n>=pct)clearInterval(c);},28);
+    if(pct>=60)fireConfetti();
+  },450);
+}
+
+function fireConfetti(){
+  const wrap=document.getElementById('confetti');wrap.innerHTML='';
+  const colors=['#7c6dfa','#fa6d8d','#6dfabc','#fabd6d','#c46dfa','#6db8fa'];
+  for(let i=0;i<70;i++){
+    const p=document.createElement('div');p.className='cp';
+    const sz=(Math.random()*9+4)+'px';
+    p.style.cssText=`left:${Math.random()*100}%;width:${sz};height:${sz};background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>0.5?'50%':'3px'};animation-duration:${(Math.random()*2+1.8).toFixed(2)}s;animation-delay:${(Math.random()*0.9).toFixed(2)}s;opacity:1;`;
+    wrap.appendChild(p);
+  }
+  setTimeout(()=>wrap.innerHTML='',5000);
+}
+
+function restartQuiz(){clearTimeout(autoNextTimer);startQuiz()}
+function goHome(){clearTimeout(autoNextTimer);switchScreen('screen-welcome')}
+
+document.querySelectorAll('.cat-pill').forEach(p=>{
+  p.onclick=()=>{document.querySelectorAll('.cat-pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');}
+});
+</script>
+</body>
+</html>
